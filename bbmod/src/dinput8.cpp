@@ -172,22 +172,21 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
 }
 
 HRESULT WINAPI DirectInput8Create(HINSTANCE inst_handle, DWORD version, const IID& r_iid, LPVOID* out_wrapper, LPUNKNOWN p_unk) {
-    if (r_iid == IID_IDirectInput8A) {
+    if (r_iid == IID_IDirectInput8A || r_iid == IID_IDirectInput8W) { // <- 支持 W
         if (!dinput8AModule) {
-            auto ret = oDirectInput8Create(inst_handle, version, r_iid, out_wrapper, p_unk);
-            if (ret) {
-                return ret;
-            }
+            IID target_iid = IID_IDirectInput8A; // 强制创建 ANSI 接口
+            auto ret = oDirectInput8Create(inst_handle, version, target_iid, out_wrapper, p_unk);
+            if (ret) return ret;
+
             dinput8AModule = *((IDirectInput8A**)out_wrapper);
             dinput8AModule = (IDirectInput8A*) new ImguiDInput(dinput8AModule);
-
         }
         *out_wrapper = dinput8AModule;
-        return 0;
+        return S_OK;
     }
     else {
-        g_log << "UNICODE DInput8 is unsupported" << std::endl;
-        MessageBoxA(NULL, "Unicode dinput8 was created, cannot continue", "bbmod: DirectInput8Create", 0);
-        exit(1);
+        g_log << "Unsupported DirectInput8 interface" << std::endl;
+        MessageBoxA(NULL, "Unsupported DirectInput8 interface", "bbmod: DirectInput8Create", 0);
+        return E_NOTIMPL;
     }
 }
